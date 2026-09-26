@@ -60,12 +60,12 @@ GGUF 的微调方向。若用户要的目标语言与端点/模型不匹配，�
 
 ## 版面检测（可选，普通翻译不要加）
 
-默认构建的 CLI 不含版面检测。若确认本机 CLI 是带 `layout` 特性构建的、且用户需要更稳的
-表格/公式处理，才加其中之一：
+发行包已编入版面检测，依赖库随包（可执行文件旁的 `resources/`，CLI 自动加载）。用户明确要
+更稳的表格/公式处理时，加其中之一即可（模型需先下载，见仓库 README §4）：
 
 ```bash
-  --layout-api <远程版面服务 URL>
-  --layout-model <PP-DocLayoutV3.onnx> --ort <libonnxruntime.so> --pdfium <libpdfium.so>
+  --layout-model <PP-DocLayoutV3.onnx>   # 本地检测：给模型即可，随包的 ORT/PDFium 会自动加载
+  --layout-api <远程版面服务 URL>         # 或走远程版面服务（仍需本地 PDFium 渲染）
 ```
 
 ## 判断成功

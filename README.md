@@ -10,7 +10,7 @@ Agent skill：包装 `turing-pdf` 命令行工具，把 PDF 里的文字翻译�
 1. [安装到你的 agent](#1-安装到你的-agent)
 2. [先拿到 CLI](#2-先拿到-cli)
 3. [翻译端点（二选一，必须有一个）](#3-翻译端点二选一必须有一个)
-4. [版面检测（可选）](#4-版面检测可选)
+4. [版面检测（可选，发行包已内置）](#4-版面检测可选发行包已内置)
 5. [完整示例](#5-完整示例)
 6. [许可](#6-许可)
 
@@ -37,16 +37,23 @@ turing-pdf-skill/
 | Windows x86_64 | `turing-pdf-cli-windows-x86_64.tar.gz` |
 | macOS（Apple Silicon） | `turing-pdf-cli-macos-aarch64.tar.gz` |
 
-解压得到 `turing-pdf`（Windows 为 `turing-pdf.exe`）+ `LICENSE.md` + `THIRD-PARTY.md` + `README.md`。
+解压后是一个目录，含：
+
+```
+turing-pdf            # 主程序（Windows 为 turing-pdf.exe）
+resources/            # 版面检测用的两个动态库（见 §4）
+LICENSE.md  THIRD-PARTY.md  README.md
+```
+
 让 CLI 可被找到，三选一：
 
-1. 放进 `PATH`（如 `~/.local/bin`）；
-2. 放到本 skill 的 `bin/`；
+1. 放进 `PATH`（如 `~/.local/bin`）——**记得把 `resources/` 一起带上**（放同一目录）；
+2. 放到本 skill 的 `bin/`（`bin/turing-pdf` + `bin/resources/`）；
 3. `export TURING_PDF_BIN=/绝对路径/turing-pdf`。
 
 验证：`turing-pdf -h` 能打印用法即成功。
 
-> ⚠️ Release 里的 CLI 是**精简构建**：只做「翻译 + 回填」，**不含版面检测**（见 §4）。
+> 发行包**已包含版面检测**（§4）；不带 `--layout-model` / `--layout-api` 时不会去加载那两个附加动态库。
 
 ## 3. 翻译端点（二选一，必须有一个）
 
@@ -110,53 +117,51 @@ turing-pdf --input in.pdf --all --layout dual-wide --output out.pdf \
 
 > 混合用法也行：`--translate-url` 指向任意 OpenAI 兼容服务，`--model` 按对方要求填。
 
-## 4. 版面检测（可选）
+## 4. 版面检测（可选，发行包已内置）
 
 开启后，PDF 中识别为**表格/公式**等区域会**保留原文**，译文不覆盖这些区域，版式更干净。
 
-**模型下载**（PP-DocLayoutV3，Apache-2.0，约 130 MB）：
+**① 下载版面模型**（PP-DocLayoutV3，Apache-2.0，约 130 MB）：
 
 - 仓库页：<https://www.modelscope.cn/models/PaddlePaddle/PP-DocLayoutV3_onnx>
 - 文件：`inference.onnx`
 - 直达页：<https://www.modelscope.cn/models/PaddlePaddle/PP-DocLayoutV3_onnx/file/view/master/inference.onnx>
 
-> ⚠️ **重要前提**：版面检测在实现上被 `layout` 编译特性整体门控（本地 ONNX **和**远程 API 都一样，
-> 两者都要本地用 PDFium 把整页渲染成图）。而**本仓库 Release 的 CLI 是精简构建、没有这个特性**——
-> 因此对下载来的 CLI，`--layout-model` / `--layout-api` **不会报错，但也完全没有效果**。
-> 要用版面检测，需要**带 `layout` 特性的 CLI 构建**（该构建会额外依赖 ONNX Runtime 与 PDFium 两个动态库）。
-
-带 `layout` 构建后（若你的 CLI 由本项目作者提供，会一并给出这两个库），用法二选一：
+**② 用 `--layout-model` 启用**（依赖库已随包，无需额外参数）：
 
 ```bash
-# A) 本地 ONNX 检测：模型 + 两个动态库
 turing-pdf --input in.pdf --all --layout dual-wide --output out.pdf \
   --translate-url <端点> --model <模型名> \
-  --layout-model /path/to/inference.onnx \
-  --ort   /path/to/libonnxruntime.so \      # Windows: onnxruntime.dll；macOS: libonnxruntime.dylib
-  --pdfium /path/to/libpdfium.so            # Windows: pdfium.dll；macOS: libpdfium.dylib
+  --layout-model /path/to/inference.onnx
+```
 
-# B) 远程版面服务（仍需本地 PDFium 渲染页面）
+**③ 关于依赖库**：发行包在 `turing-pdf` 同目录带了 `resources/libonnxruntime.*` 与
+`resources/libpdfium.*`，CLI 会**自动从「可执行文件旁的 `resources/`」加载**。所以：
+
+- **务必让 `resources/` 和 `turing-pdf` 待在同一目录**（整个解压目录一起移动/安装）；
+- 想用自己的一份库时，用 `--ort` / `--pdfium` 指定，或设环境变量
+  `ORT_DYLIB_PATH` / `PDF_REFLOW_PDFIUM`；
+- 只用基础翻译（**不加** `--layout-model`）时，不需要这些库，也不会加载它们。
+
+**替代：远程版面服务**（仍需本地 PDFium 把页面渲染成图）：
+
+```bash
 turing-pdf --input in.pdf --all --layout dual-wide --output out.pdf \
   --translate-url <端点> --model <模型名> \
   --layout-api http://127.0.0.1:8080/detect \
-  --layout-api-key <可选> --pdfium /path/to/libpdfium.so
+  --layout-api-key <可选> --layout-api-model <可选>
 ```
 
-动态库来源（自行构建时）：
-
-- ONNX Runtime（CPU 版）：<https://github.com/microsoft/onnxruntime/releases>
-- PDFium：<https://github.com/bblanchon/pdfium-binaries/releases>
-
-不需要版面检测就**不要加** `--layout-model` / `--layout-api`（精简 CLI 上它们无效）。
+不需要版面检测就**不要加** `--layout-model` / `--layout-api`。
 
 ## 5. 完整示例
 
 ```bash
-# 托管服务 + 整页双联（左原文 / 右译文）
+# 托管服务 + 整页双联（左原文 / 右译文）+ 版面检测
 scripts/translate.sh --input in.pdf \
   --translate-url https://api.turingevo.com/v1/chat/completions \
   --model tencent/Hunyuan-MT-7B --api-key "$TURINGEVO_KEY" \
-  --all --layout dual-wide --output out.pdf
+  --all --layout dual-wide --layout-model /path/to/inference.onnx --output out.pdf
 
 # 本地 llama-server + 单语覆盖，只翻 1–10 页
 scripts/translate.sh --input in.pdf \
