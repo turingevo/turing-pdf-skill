@@ -90,8 +90,8 @@ LICENSE.md  THIRD-PARTY.md  README.md
 turing-pdf-skill/models/PP-DocLayoutV3.onnx
 ```
 
-这样 `scripts/translate.sh` 会**自动启用**版面检测。也可存到别处，用
-`TURING_PDF_LAYOUT_MODEL=/path/xxx.onnx` 指定（见 §7）。
+这样 `scripts/translate.sh` 会**自动启用**版面检测。
+也可存到别处，用`TURING_PDF_LAYOUT_MODEL=/path/xxx.onnx` 指定（见 §7）。
 
 ## 4. 翻译端点（二选一）
 
