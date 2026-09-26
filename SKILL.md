@@ -49,7 +49,7 @@ scripts/translate.sh --input in.pdf --translate-url <端点> --all --layout dual
 - `--layout mono`：覆盖原文（单语）。
   `--layout dual-wide`（推荐，`--bilingual` 同义）：整页双联——左原文、右译文。
   `--layout interleave`：每段原文后紧跟译文。
-- `--pages all|N|A-B` 选页；不给 `--output` 则写到输入旁的 `<stem>.zh.pdf`。
+- `--pages all|N|A-B` 选页；`--target-lang CODE` 选译文语言（见「目标语言」一节）；不给 `--output` 则写到输入旁的 `<stem>.<语言代码>.pdf`。
 - `--jobs N` 并发（默认 4；本地端点可调大）。
 - `--api-key K` 仅远程端点需要。
 
@@ -65,8 +65,25 @@ scripts/translate.sh --input in.pdf --translate-url <端点> --all --layout dual
 
 ## 目标语言
 
-CLI 本身不传目标语言，由端点决定：远程托管服务看 `--model`；本地 llama-server 看所加载
-GGUF 的微调方向。若用户要的目标语言与端点/模型不匹配，如实说明，不要伪装成功。
+用 `--target-lang CODE` 指定译文语言，缺省 `zh`（简体中文）。Hy-MT2 官方支持 33 种语言互译，
+模型卡另有简/繁中文与粤语等变体，共 38 项代码；`turing-pdf -h` 会列出全部。常用的：
+
+| 代码 | 语言 | 代码 | 语言 | 代码 | 语言 |
+|---|---|---|---|---|---|
+| `zh` | 简体中文 | `zh-Hant` | 繁体中文 | `yue` | 粤语 |
+| `en` | 英语 | `ja` | 日语 | `ko` | 韩语 |
+| `fr` | 法语 | `de` | 德语 | `es` | 西班牙语 |
+| `ru` | 俄语 | `pt` | 葡萄牙语 | `it` | 意大利语 |
+| `ar` | 阿拉伯语 | `vi` | 越南语 | `th` | 泰语 |
+
+- **只给目标语言**：源语言由模型自己判断，CLI 没有 `--source-lang`。
+- 提示词里的语言名由 CLI 补成**完整名称**（`Japanese`，不是 `ja`），与模型卡的官方模板一致。
+- **产物文件名**：不给 `--output` 时写 `<stem>.<CODE>.pdf`（如 `paper.ja.pdf`）。
+- 用**旧版 CLI**（没有 `--target-lang`）时目标语言只能由端点决定：远程托管服务看 `--model`，
+  本地 llama-server 看所加载 GGUF 的微调方向；此时若用户要的目标语言与端点/模型不匹配，
+  如实说明，不要伪装成功。
+- **从右到左的文字**（阿拉伯语、希伯来语、波斯语、乌尔都语、维吾尔语）与需要连写整形的文字
+  （如藏语）：回填按逐字从左到右排布，可能不连写、不重排。用户点名这些语言时先说明该限制。
 
 ## 只取结构（不翻译）
 

@@ -167,6 +167,8 @@ turing-pdf --input in.pdf \
 ```
 
 - `--layout`：`mono`（覆盖原文）| `dual-wide`（整页双联，`--bilingual` 同义）| `interleave`（上下对照）。
+- `--target-lang CODE`：译文语言，缺省 `zh`（简体中文）。Hy-MT2 支持 33 种语言互译，加上简/繁中文与
+  粤语等变体共 38 项代码，完整清单见 `turing-pdf -h`。**源语言由模型自判**，不用指定。
 - `--pages all|N|A-B` 选页；`--jobs N` 并发；`--timeout S` 单请求超时。
 - 只导出结构不翻译：`--dump-blocks --json`、`--boxes --json`。
 - 完整参数见 `turing-pdf -h`。
