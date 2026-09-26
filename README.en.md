@@ -15,6 +15,8 @@
 
 # turing-pdf-skill
 
+![Demo: TuringPDF in action](demo.png)
+
 ## What is this
 
 `turing-pdf-skill` is an **agent skill** that wraps the `turing-pdf` CLI: it translates the text in a PDF

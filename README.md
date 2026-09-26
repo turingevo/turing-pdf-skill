@@ -4,7 +4,7 @@
 > **注册 → 领取 API Key → 填端点，三步即可开始翻译，无需自建模型。**
 >
 > - 注册：**https://api.turingevo.com**
-> - 购买充值：**https://api.turingevo.com/pricing**
+> - 全球顶级AI大模型：**https://api.turingevo.com/pricing**
 > - 端点：`https://api.turingevo.com/v1/chat/completions`
 > - 模型：`tencent/Hunyuan-MT-7B`
 > - 交流群：QQ `873673497`
@@ -14,6 +14,8 @@
 ---
 
 # turing-pdf-skill
+
+![效果图：TuringPDF 翻译效果](demo.png)
 
 ## 这是什么
 
