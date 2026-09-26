@@ -170,7 +170,10 @@ turing-pdf --input in.pdf \
   `interleave` (each block followed by its translation).
 - `--target-lang CODE`: target language, default `zh` (Simplified Chinese). Hy-MT2 covers 33
   languages — 38 codes with Simplified/Traditional Chinese and Cantonese — and `turing-pdf -h`
-  lists them all. The **source language is auto-detected**, so there is no `--source-lang`.
+  lists them all.
+- `--source-lang CODE`: source language, **unset by default** — the prompt does not name it and the
+  model works it out itself (the official default template). Only needed for documents that mix
+  several source languages.
 - `--pages all|N|A-B`; `--jobs N` concurrency; `--timeout S` request timeout.
 - Structure only, no translation: `--dump-blocks --json`, `--boxes --json`.
 - Full flags: `turing-pdf -h`.

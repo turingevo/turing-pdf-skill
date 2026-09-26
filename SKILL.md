@@ -76,7 +76,7 @@ scripts/translate.sh --input in.pdf --translate-url <端点> --all --layout dual
 | `ru` | 俄语 | `pt` | 葡萄牙语 | `it` | 意大利语 |
 | `ar` | 阿拉伯语 | `vi` | 越南语 | `th` | 泰语 |
 
-- **只给目标语言**：源语言由模型自己判断，CLI 没有 `--source-lang`。
+- **源语言默认不指定**：不传 `--source-lang` 时提示词里不写源语言，由模型自判（Hy-MT2 官方默认模板就是这种形态）。要钉住源语言就加 `--source-lang CODE`（同一份代码清单），提示词变成 `from <源语言> into <目标语言>`；只有文档混着多种源语言时才需要它。
 - 提示词里的语言名由 CLI 补成**完整名称**（`Japanese`，不是 `ja`），与模型卡的官方模板一致。
 - **产物文件名**：不给 `--output` 时写 `<stem>.<CODE>.pdf`（如 `paper.ja.pdf`）。
 - 用**旧版 CLI**（没有 `--target-lang`）时目标语言只能由端点决定：远程托管服务看 `--model`，
