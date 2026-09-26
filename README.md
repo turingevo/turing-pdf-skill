@@ -1,18 +1,20 @@
 # turing-pdf-skill
 
 Agent skill：包装 `turing-pdf` 命令行工具，把 PDF 里的文字翻译并按原版式回填，产出单语或双语 PDF。
+**默认开启版面检测**——PDF 里识别为表格/公式的区域会保留原文，译文不覆盖，版式更干净。
 
 - `SKILL.md`：给 agent 的执行说明（何时触发、怎么调用、怎么判断成功）。
-- `scripts/translate.sh`：薄封装，按顺序定位 `turing-pdf` 并原样透传参数。
+- `scripts/translate.sh`：薄封装，定位 `turing-pdf`、**自动带上版面模型**并原样透传参数。
 
 目录：
 
 1. [安装到你的 agent](#1-安装到你的-agent)
 2. [先拿到 CLI](#2-先拿到-cli)
-3. [翻译端点（二选一，必须有一个）](#3-翻译端点二选一必须有一个)
-4. [版面检测（可选，发行包已内置）](#4-版面检测可选发行包已内置)
-5. [完整示例](#5-完整示例)
-6. [许可](#6-许可)
+3. [下载版面检测模型（推荐，默认开启）](#3-下载版面检测模型推荐默认开启)
+4. [翻译端点（二选一，必须有一个）](#4-翻译端点二选一必须有一个)
+5. [推荐用法（默认开启版面检测）](#5-推荐用法默认开启版面检测)
+6. [关闭或替换版面检测](#6-关闭或替换版面检测)
+7. [许可](#7-许可)
 
 ---
 
@@ -23,8 +25,8 @@ Agent skill：包装 `turing-pdf` 命令行工具，把 PDF 里的文字翻译�
 ```
 turing-pdf-skill/
 ├── SKILL.md
-└── scripts/
-    └── translate.sh
+├── scripts/translate.sh
+└── models/                 # 版面模型放这里（见 §3）
 ```
 
 ## 2. 先拿到 CLI
@@ -37,30 +39,47 @@ turing-pdf-skill/
 | Windows x86_64 | `turing-pdf-cli-windows-x86_64.tar.gz` |
 | macOS（Apple Silicon） | `turing-pdf-cli-macos-aarch64.tar.gz` |
 
-解压后是一个目录，含：
+解压后是一个目录：
 
 ```
 turing-pdf            # 主程序（Windows 为 turing-pdf.exe）
-resources/            # 版面检测用的两个动态库（见 §4）
+resources/            # 版面检测用的 ONNX Runtime + PDFium 动态库
 LICENSE.md  THIRD-PARTY.md  README.md
 ```
 
-让 CLI 可被找到，三选一：
+让 CLI 可被找到，三选一（**切记 `resources/` 要和 `turing-pdf` 同目录**）：
 
-1. 放进 `PATH`（如 `~/.local/bin`）——**记得把 `resources/` 一起带上**（放同一目录）；
+1. 放进 `PATH`（如 `~/.local/bin`）——连 `resources/` 一起放；
 2. 放到本 skill 的 `bin/`（`bin/turing-pdf` + `bin/resources/`）；
 3. `export TURING_PDF_BIN=/绝对路径/turing-pdf`。
 
 验证：`turing-pdf -h` 能打印用法即成功。
 
-> 发行包**已包含版面检测**（§4）；不带 `--layout-model` / `--layout-api` 时不会去加载那两个附加动态库。
+## 3. 下载版面检测模型（推荐，默认开启）
 
-## 3. 翻译端点（二选一，必须有一个）
+**推荐直接开启版面检测**：PDF 里识别为表格/公式的区域会保留原文，译文不覆盖，成品更干净。
+只需下载一次模型：
+
+- 仓库页：<https://www.modelscope.cn/models/PaddlePaddle/PP-DocLayoutV3_onnx>
+- 文件：`inference.onnx`（PP-DocLayoutV3，Apache-2.0，约 130 MB）
+- 直达页：<https://www.modelscope.cn/models/PaddlePaddle/PP-DocLayoutV3_onnx/file/view/master/inference.onnx>
+
+放到**本 skill 的 `models/`**，命名 `PP-DocLayoutV3.onnx`：
+
+```
+turing-pdf-skill/models/PP-DocLayoutV3.onnx
+```
+
+这样 `scripts/translate.sh` 会**自动启用**版面检测，无需每次传参。
+
+> 也可存到别处，用环境变量 `TURING_PDF_LAYOUT_MODEL=/path/xxx.onnx` 指定（见 §6）。
+
+## 4. 翻译端点（二选一，必须有一个）
 
 `turing-pdf` 是 HTTP 客户端，**必须给它一个 OpenAI 兼容的 `/v1/chat/completions` 端点**——
 远程服务，或你在本机跑起来的 llama-server。
 
-### 3.1 推荐：TuringEvo 托管服务（开箱即用，原文会离开本机）
+### 4.1 推荐：TuringEvo 托管服务（开箱即用，原文会离开本机）
 
 1. 打开 **<https://api.turingevo.com>**，注册账号；
 2. 到 **<https://api.turingevo.com/pricing>** 购买/领取 Token，拿到 **API Key**；
@@ -72,16 +91,9 @@ LICENSE.md  THIRD-PARTY.md  README.md
    | 模型 | `tencent/Hunyuan-MT-7B` |
    | API Key | 你的 key |
 
-```bash
-turing-pdf --input in.pdf --all --layout dual-wide --output out.pdf \
-  --translate-url https://api.turingevo.com/v1/chat/completions \
-  --model tencent/Hunyuan-MT-7B \
-  --api-key <你的 API KEY>
-```
-
 > 交流群：QQ `873673497`。
 
-### 3.2 本地：自备 llama-server + 腾讯翻译模型 GGUF（离线，原文不出本机）
+### 4.2 本地：自备 llama-server + 腾讯翻译模型 GGUF（离线，原文不出本机）
 
 需要一个 `llama-server`（到 [llama.cpp 发行页](https://github.com/ggml-org/llama.cpp/releases/latest)
 下载与你系统/硬件匹配的构建，解压即得 `llama-server` 及其依赖库）。
@@ -112,61 +124,36 @@ curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8888/health   # 期望
 ```bash
 turing-pdf --input in.pdf --all --layout dual-wide --output out.pdf \
   --translate-url http://127.0.0.1:8888/v1/chat/completions \
-  --model local-model
+  --model local-model \
+  --layout-model models/PP-DocLayoutV3.onnx
 ```
 
-> 混合用法也行：`--translate-url` 指向任意 OpenAI 兼容服务，`--model` 按对方要求填。
+## 5. 推荐用法（默认开启版面检测）
 
-## 4. 版面检测（可选，发行包已内置）
-
-开启后，PDF 中识别为**表格/公式**等区域会**保留原文**，译文不覆盖这些区域，版式更干净。
-
-**① 下载版面模型**（PP-DocLayoutV3，Apache-2.0，约 130 MB）：
-
-- 仓库页：<https://www.modelscope.cn/models/PaddlePaddle/PP-DocLayoutV3_onnx>
-- 文件：`inference.onnx`
-- 直达页：<https://www.modelscope.cn/models/PaddlePaddle/PP-DocLayoutV3_onnx/file/view/master/inference.onnx>
-
-**② 用 `--layout-model` 启用**（依赖库已随包，无需额外参数）：
+**方式 A：封装脚本**（`scripts/translate.sh` 会在 `models/` 里找到版面模型并自动加上）：
 
 ```bash
-turing-pdf --input in.pdf --all --layout dual-wide --output out.pdf \
-  --translate-url <端点> --model <模型名> \
-  --layout-model /path/to/inference.onnx
-```
-
-**③ 关于依赖库**：发行包在 `turing-pdf` 同目录带了 `resources/libonnxruntime.*` 与
-`resources/libpdfium.*`，CLI 会**自动从「可执行文件旁的 `resources/`」加载**。所以：
-
-- **务必让 `resources/` 和 `turing-pdf` 待在同一目录**（整个解压目录一起移动/安装）；
-- 想用自己的一份库时，用 `--ort` / `--pdfium` 指定，或设环境变量
-  `ORT_DYLIB_PATH` / `PDF_REFLOW_PDFIUM`；
-- 只用基础翻译（**不加** `--layout-model`）时，不需要这些库，也不会加载它们。
-
-**替代：远程版面服务**（仍需本地 PDFium 把页面渲染成图）：
-
-```bash
-turing-pdf --input in.pdf --all --layout dual-wide --output out.pdf \
-  --translate-url <端点> --model <模型名> \
-  --layout-api http://127.0.0.1:8080/detect \
-  --layout-api-key <可选> --layout-api-model <可选>
-```
-
-不需要版面检测就**不要加** `--layout-model` / `--layout-api`。
-
-## 5. 完整示例
-
-```bash
-# 托管服务 + 整页双联（左原文 / 右译文）+ 版面检测
+# 托管服务
 scripts/translate.sh --input in.pdf \
   --translate-url https://api.turingevo.com/v1/chat/completions \
   --model tencent/Hunyuan-MT-7B --api-key "$TURINGEVO_KEY" \
-  --all --layout dual-wide --layout-model /path/to/inference.onnx --output out.pdf
+  --all --layout dual-wide --output out.pdf
 
-# 本地 llama-server + 单语覆盖，只翻 1–10 页
+# 本地 llama-server，只翻 1–10 页
 scripts/translate.sh --input in.pdf \
   --translate-url http://127.0.0.1:8888/v1/chat/completions \
-  --model local-model --pages 1-10 --layout mono --output out.pdf
+  --model local-model --pages 1-10 --layout dual-wide --output out.pdf
+```
+
+**方式 B：直接调 CLI**（自己带上 `--layout-model`）：
+
+```bash
+turing-pdf --input in.pdf \
+  --translate-url https://api.turingevo.com/v1/chat/completions \
+  --model tencent/Hunyuan-MT-7B --api-key "$TURINGEVO_KEY" \
+  --all --layout dual-wide \
+  --layout-model /path/to/models/PP-DocLayoutV3.onnx \
+  --output out.pdf
 ```
 
 - `--layout` 取 `mono`（覆盖原文）| `dual-wide`（整页双联，`--bilingual` 同义）| `interleave`（上下对照）。
@@ -174,7 +161,18 @@ scripts/translate.sh --input in.pdf \
 - 只导出结构不翻译：`--dump-blocks --json`、`--boxes --json`。
 - 完整参数见 `turing-pdf -h`，或随二进制分发的 `README.md`。
 
-## 6. 许可
+## 6. 关闭或替换版面检测
+
+| 想要 | 怎么做 |
+|---|---|
+| **关闭** | 直接调 CLI 时**不加** `--layout-model`；用封装脚本时 `export TURING_PDF_LAYOUT_MODEL=off` |
+| **换模型 / 换位置** | `export TURING_PDF_LAYOUT_MODEL=/path/xxx.onnx`（不存在会告警并退回纯翻译）|
+| **走远程版面服务** | 给 CLI 传 `--layout-api <URL>`（此时**不要**再给 `--layout-model`）|
+
+> 版面检测的动态库（ONNX Runtime / PDFium）已在 `resources/` 随包，无需另配；**别把它和
+> `turing-pdf` 分开**。基础翻译本身不需要这些库。
+
+## 7. 许可
 
 - 本仓库的 skill 文本与脚本：**MIT**（见 [`LICENSE`](LICENSE)）。
 - **`turing-pdf` 二进制为闭源专有软件**：个人非商业使用免费，商业使用需另行授权。

@@ -1,12 +1,12 @@
 ---
 name: turing-pdf-translate
-description: 用 turing-pdf CLI 把 PDF 的文字翻译并按原版式回填，产出单语或双语 PDF。当用户说“翻译这个 PDF”“做成中英对照 PDF”“把 PDF 转成中文”等时使用。需要一个 OpenAI 兼容端点（远程服务或本地 llama-server）与本机可用的 turing-pdf 可执行文件。
+description: 用 turing-pdf CLI 把 PDF 的文字翻译并按原版式回填，产出单语或双语 PDF（默认开启版面检测，PDF 里的表格/公式区域保留原文）。当用户说“翻译这个 PDF”“做成中英对照 PDF”“把 PDF 转成中文”等时使用。需要一个 OpenAI 兼容端点（远程服务或本地 llama-server）与本机可用的 turing-pdf 可执行文件。
 ---
 
 # turing-pdf：PDF 翻译
 
 把 PDF 里的文字块抽出来、送 OpenAI 兼容接口翻译、再按原版式回填到新 PDF。
-不直接操作 PDF 内部结构——调用 `turing-pdf` CLI 即可。
+不直接操作 PDF 内部结构——调用 `turing-pdf` CLI 即可。**默认开启版面检测**（见下）。
 
 ## 前置条件（先检查，缺一不可）
 
@@ -15,22 +15,32 @@ description: 用 turing-pdf CLI 把 PDF 的文字翻译并按原版式回填，�
    - `PATH` 里的 `turing-pdf`；
    - 本 skill 目录下的 `bin/turing-pdf`（或 Windows 的 `bin/turing-pdf.exe`）。
    都没有时，从**本仓库的 Releases** 下载对应平台的 `turing-pdf-cli-<平台>.tar.gz`
-   （`linux-x86_64` / `windows-x86_64` / `macos-aarch64`），解压得到 `turing-pdf`，
-   放进 `PATH` 或本 skill 的 `bin/`。
+   （`linux-x86_64` / `windows-x86_64` / `macos-aarch64`），解压得到 `turing-pdf` **连同
+   `resources/` 目录**，一起放进 `PATH` 或本 skill 的 `bin/`（`resources/` 必须与二进制同目录）。
    先执行 `turing-pdf -h` 验证可用；找不到又下不动就如实告诉用户，不要假装已翻译。
-2. **翻译端点**：一个 OpenAI 兼容的 `/v1/chat/completions`，二选一：
+2. **版面模型（默认启用，推荐先备好）**：PP-DocLayoutV3 的 `inference.onnx`（约 130 MB，下载地址
+   见仓库 README）。放在本 skill 的 `models/`（`models/PP-DocLayoutV3.onnx` 或 `models/inference.onnx`）
+   即可，`scripts/translate.sh` 会自动带上；没放也不阻塞，只是退化为纯翻译。
+3. **翻译端点**：一个 OpenAI 兼容的 `/v1/chat/completions`，二选一：
    - 远程服务（`https://…`，通常要 `--api-key`）；或
    - 用户本机跑的 llama-server（如 `http://127.0.0.1:8888/v1/chat/completions`）。
    **本工具不提供端点、也不随包模型**。端点拿不到就问用户，别猜一个地址。
 
-## 基本用法
+## 基本用法（默认开版面检测）
 
 ```bash
 "$TURING_PDF_BIN" --input <in.pdf> \
   --translate-url <端点> \
   --model <模型名> \
   --all --layout dual-wide \
+  --layout-model <本 skill 的 models/PP-DocLayoutV3.onnx> \
   --output <out.pdf>
+```
+
+用封装脚本更省事——它会**自动带上本 skill 的版面模型**（有就加，没有就纯翻译）：
+
+```bash
+scripts/translate.sh --input in.pdf --translate-url <端点> --all --layout dual-wide --output out.pdf
 ```
 
 - `--layout mono`：覆盖原文（单语）。
@@ -40,11 +50,15 @@ description: 用 turing-pdf CLI 把 PDF 的文字翻译并按原版式回填，�
 - `--jobs N` 并发（默认 4；本地端点可调大）。
 - `--api-key K` 仅远程端点需要。
 
-也可用本 skill 的封装脚本（自动定位 CLI）：
+## 版面检测（默认开启）
 
-```bash
-scripts/translate.sh --input in.pdf --translate-url <端点> --all --layout dual-wide --output out.pdf
-```
+让 PDF 里识别为**表格/公式**的区域**保留原文**、译文不覆盖，版式更干净。发行版 CLI 已内置该
+能力，所需动态库随包放在 `resources/`（与二进制同目录，自动加载）。
+
+- **开启（默认）**：`--layout-model <PP-DocLayoutV3.onnx>`；封装脚本在有模型时自动加。
+- **关闭**：不加 `--layout-model`；用封装脚本时设 `TURING_PDF_LAYOUT_MODEL=off`。
+- **换模型/位置**：`TURING_PDF_LAYOUT_MODEL=/path/xxx.onnx`。
+- **改用远程版面服务**：`--layout-api <URL>`（此时不要再给 `--layout-model`）。
 
 ## 目标语言
 
@@ -56,16 +70,6 @@ GGUF 的微调方向。若用户要的目标语言与端点/模型不匹配，�
 ```bash
 "$TURING_PDF_BIN" --input in.pdf --dump-blocks --json   # 文字块 + 规则
 "$TURING_PDF_BIN" --input in.pdf --boxes --json         # 版式框
-```
-
-## 版面检测（可选，普通翻译不要加）
-
-发行包已编入版面检测，依赖库随包（可执行文件旁的 `resources/`，CLI 自动加载）。用户明确要
-更稳的表格/公式处理时，加其中之一即可（模型需先下载，见仓库 README §4）：
-
-```bash
-  --layout-model <PP-DocLayoutV3.onnx>   # 本地检测：给模型即可，随包的 ORT/PDFium 会自动加载
-  --layout-api <远程版面服务 URL>         # 或走远程版面服务（仍需本地 PDFium 渲染）
 ```
 
 ## 判断成功
