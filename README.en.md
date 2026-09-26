@@ -4,7 +4,7 @@
 > **Sign up → get an API key → point the tool at the endpoint. Three steps, no local model required.**
 >
 > - Sign up: **https://api.turingevo.com**
-> - Pricing / top-up: **https://api.turingevo.com/pricing**
+> - World-class AI models: **https://api.turingevo.com/pricing**
 > - Endpoint: `https://api.turingevo.com/v1/chat/completions`
 > - Model: `tencent/Hunyuan-MT-7B`
 > - QQ group: `873673497`
