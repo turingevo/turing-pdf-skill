@@ -17,9 +17,11 @@ description: 用 turing-pdf CLI 把 PDF 的文字翻译并按原版式回填，�
    - `PATH` 里的 `turing-pdf`；
    - 本 skill 目录下的 `bin/turing-pdf`（或 Windows 的 `bin/turing-pdf.exe`）。
    都没有时，从**本仓库的 Releases** 下载对应平台的 `turing-pdf-cli-<平台>.tar.gz`
-   （`linux-x86_64` / `windows-x86_64` / `macos-aarch64`），解压得到 `turing-pdf` **连同
-   `resources/` 目录**，一起放进 `PATH` 或本 skill 的 `bin/`（`resources/` 必须与二进制同目录）。
-   先执行 `turing-pdf -h` 验证可用；找不到又下不动就如实告诉用户，不要假装已翻译。
+   （`linux-x86_64` / `windows-x86_64` / `macos-aarch64`；Release 名形如 `vX.Y.Z`，与桌面
+   安装包**同版本号**，资产名本身不带版本号），解压得到 `turing-pdf` **连同 `resources/` 目录**，
+   一起放进 `PATH` 或本 skill 的 `bin/`（`resources/` 必须与二进制同目录）。先执行
+   `turing-pdf -h` 验证可用（第一行是 CLI 版本，与桌面端装的是同一个号；报错时值得一并向用户确认）；
+   找不到又下不动就如实告诉用户，不要假装已翻译。
 2. **版面模型（默认启用，推荐先备好）**：PP-DocLayoutV3 的 `inference.onnx`（约 130 MB，下载地址
    见仓库 README §3）。放在本 skill 的 `models/`（`models/PP-DocLayoutV3.onnx` 或
    `models/inference.onnx`）即可，`scripts/translate.sh` 会自动带上；没放也不阻塞，只是退化为纯翻译。

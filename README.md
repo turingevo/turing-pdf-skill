@@ -61,6 +61,11 @@ turing-pdf-skill/
 | Windows x86_64 | `turing-pdf-cli-windows-x86_64.tar.gz` |
 | macOS（Apple Silicon） | `turing-pdf-cli-macos-aarch64.tar.gz` |
 
+> **选哪一版**：CLI、桌面安装包与 skill 共用**同一个版本号**（Release 名形如 `vX.Y.Z`）——
+> 三者从同一 commit 构建、一起发布，桌面端装的是 0.4.0，CLI 就该是 0.4.0。资产名**不带
+> 版本号**（skill 文档与 `scripts/translate.sh` 按它写死）：要确认拿到哪一版，看 Release tag，
+> 或装好后跑 `turing-pdf -h`（第一行就是 CLI 版本）。
+
 解压后是一个目录：
 
 ```

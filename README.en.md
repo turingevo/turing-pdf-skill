@@ -63,6 +63,12 @@ The engine is `turing-pdf`. Download the CLI archive for your platform from **th
 | Windows x86_64 | `turing-pdf-cli-windows-x86_64.tar.gz` |
 | macOS (Apple Silicon) | `turing-pdf-cli-macos-aarch64.tar.gz` |
 
+> **Which release?** The CLI, the desktop installers and the skill all share **one version
+> number** (releases are named `vX.Y.Z`): they are built from the same commit and ship together,
+> so a desktop install of 0.4.0 pairs with the 0.4.0 CLI. Asset names carry **no version** —
+> the docs and `scripts/translate.sh` pin them; check the release tag, or run `turing-pdf -h`
+> (its first line is the CLI version) once installed.
+
 After extracting:
 
 ```
